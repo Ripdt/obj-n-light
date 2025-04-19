@@ -73,7 +73,8 @@ int main(int argc, char** argv) {
   glEnable(GL_DEPTH_TEST);
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
 
-  obj = load_obj("");
+  obj = criar_cubo(0, 0, 0, 50);
+  //obj = load_obj("");
 
   setup_drawing(obj);
 
@@ -157,7 +158,13 @@ void keyboard(unsigned char key, int x, int y) {
   switch (key) {
   case '+': escalar(obj, 1.1, 1.1, 1.1); break;
   case '-': escalar(obj, 0.9, 0.9, 0.9); break;
-  case 'r': rotacionar(obj, 0, 0, .1); break;
+  case 'x': escalar(obj, 1.1, 1, 1); break;
+  case 'y': escalar(obj, 1, 1.1, 1); break;
+  case 'z': escalar(obj, 1, 1, 1.1); break;
+    // SHIFT
+  case 'X': escalar(obj, .9, 1, 1); break;
+  case 'Y': escalar(obj, 1, .9, 1); break;
+  case 'Z': escalar(obj, 1, 1, .9); break;
   case ' ': exit(0); break;
   }
 }
