@@ -6,12 +6,42 @@
 #include <numbers>
 #include <fstream>
 #include <string>
+#include <math.h>
 
-struct Vetor3D {
+#define LARGURA 512
+#define ALTURA 512
+
+class Vector3D {
+public:
+
   double x, y, z;
+  Vector3D(double x = 0, double y = 0 , double z = 0) : x(x), y(y), z(z) {}
+  Vector3D(const Vector3D& other) : x(other.x), y(other.y), z(other.z) {}
+
+  Vector3D operator+(const Vector3D& other) const {
+    return Vector3D(x + other.x, y + other.y, z + other.z);
+  }
+  Vector3D operator-(const Vector3D& other) const {
+    return Vector3D(x - other.x, y - other.y, z - other.z);
+  }
+  Vector3D operator/(double scalar) const {
+    return Vector3D(x / scalar, y / scalar, z / scalar);
+  }
+  void operator=(const Vector3D& other) {
+    x = other.x;
+    y = other.y;
+    z = other.z;
+  }
 };
 
+typedef Vector3D Vetor3D;
 typedef Vetor3D Vertice;
+
+class Linha {
+public:
+  Vetor3D v1, v2;
+  Linha(const Vetor3D& _v1, const Vetor3D& _v2) : v1(_v1), v2(_v2) {}
+};
 
 struct Aresta {
   int v1, v2;
@@ -21,7 +51,7 @@ using ListaVertices = std::vector<Vertice>;
 using ListaArestas = std::vector<Aresta>;
 
 struct Face {
-  ListaArestas arestas;
+  int v1, v2, v3;
 };
 
 using ListaFaces = std::vector<Face>;
@@ -44,9 +74,11 @@ struct Mouse {
   float sense = .4;
 };
 
+Vetor3D pCamera ;
+
 Poligono criar_cubo(double x, double y, double z, double tamanho);
-Poligono load_obj(std::string fname);
-void setup_drawing(Poligono& obj);
+Poligono carregar_obj(std::string fname);
+void definir_desenho(Poligono& obj);
 void desenhar(Poligono& cubo);
 void display();
 void keyboard(unsigned char key, int x, int y);
@@ -59,7 +91,7 @@ int delay = 10;
 Mouse mouse;
 
 int main(int argc, char** argv) {
-  glutInitWindowSize(512, 512);
+  glutInitWindowSize(LARGURA, ALTURA);
 
   glutInit(&argc, argv);
   glutCreateWindow("Wireframe");
@@ -76,7 +108,7 @@ int main(int argc, char** argv) {
   obj = criar_cubo(0, 0, 0, 50);
   //obj = load_obj("");
 
-  setup_drawing(obj);
+  definir_desenho(obj);
 
   glutDisplayFunc(display);
   glutKeyboardFunc(keyboard);
@@ -104,9 +136,18 @@ Poligono criar_cubo(double x, double y, double z, double tamanho) {
   ListaArestas face3 = { {0, 4}, {1, 5}, {2, 6}, {3, 7} };
 
   novo_cubo.faces = {
-    { face1 },
-    { face2 },
-    { face3 }
+    { 0, 1, 2 },
+    { 0, 2, 3 },
+    { 4, 5, 6 },
+    { 4, 6, 7 },
+    { 0, 1, 5 },
+    { 0, 5, 4 },
+    { 1, 2, 6 },
+    { 1, 6, 5 },
+    { 2, 3, 7 },
+    { 2, 7, 6 },
+    { 3, 0, 4 },
+    { 3, 4, 7 }
   };
 
   return novo_cubo;
@@ -126,6 +167,7 @@ void redraw(int value) {
 }
 
 void desenhar(Poligono& obj) {
+
   glPushMatrix();
   glTranslatef(obj.posicao.x, obj.posicao.y, obj.posicao.z);
   glRotatef(obj.rotacao.x, 1, 0, 0);
@@ -196,23 +238,38 @@ void mouse_move(int x, int y) {
   mouse.posicao = { x, y };
 }
 
-void setup_drawing(Poligono& obj) {
+void definir_desenho(Poligono& obj) {
   obj.callList = glGenLists(1);
   glNewList(obj.callList, GL_COMPILE);
   {
-    std::cout << "Vertices: " << obj.vertices.size() << std::endl;
-    std::cout << "Faces: " << obj.faces.size() << std::endl;
-    glPointSize(2.0);
-    glColor3f(0.0, 0.0, 0.0);
-    glBegin(GL_LINES);
+    glColor3d(0, 1, 0);
+    glBegin(GL_TRIANGLES);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
 
     for (const Face& face : obj.faces) {
-      for (const Aresta& aresta : face.arestas) {
-        const Vertice& v1 = obj.vertices[aresta.v1];
-        const Vertice& v2 = obj.vertices[aresta.v2];
-        glVertex3f(v1.x, v1.y, v1.z);
-        glVertex3f(v2.x, v2.y, v2.z);
-      }
+
+      const Vertice& a = obj.vertices[face.v1];
+      const Vertice& b = obj.vertices[face.v2];
+      const Vertice& c = obj.vertices[face.v3];
+
+      Vector3D ab = b - a;
+      Vector3D ac = c - a;
+
+      Vector3D normal(
+        ab.y * ac.z - ab.z * ac.y,
+        ab.z * ac.x - ab.x * ac.z,
+        ab.x * ac.y - ab.y * ac.x
+      );
+
+      double comprimento = std::sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
+      Vector3D normalUnit = normal / comprimento;
+
+      glNormal3f(normalUnit.x, normalUnit.y, normalUnit.z);
+
+      glVertex3f(a.x, a.y, a.z);
+      glVertex3f(b.x, b.y, b.z);
+      glVertex3f(c.x, c.y, c.z);
     }
 
     glEnd();
@@ -220,7 +277,7 @@ void setup_drawing(Poligono& obj) {
   glEndList();
 }
 
-Poligono load_obj(std::string fname)
+Poligono carregar_obj(std::string fname)
 {
   int read;
   float x, y, z;
@@ -250,8 +307,7 @@ Poligono load_obj(std::string fname)
         int fp = stoi(x.substr(0, x.find("/"))) - 1;
         int fs = stoi(y.substr(0, y.find("/"))) - 1;
         int ft = stoi(z.substr(0, z.find("/"))) - 1;
-        Face face;
-        face.arestas = { {fp, fs}, {fs, ft}, {ft, fp} };
+        Face face = {fp, fs, ft};
         obj.faces.push_back(face);
       }
     }
