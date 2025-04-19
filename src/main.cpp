@@ -7,9 +7,11 @@
 #include <fstream>
 #include <string>
 
-struct Vertice {
+struct Vetor3D {
   double x, y, z;
 };
+
+typedef Vetor3D Vertice;
 
 struct Aresta {
   int v1, v2;
@@ -27,10 +29,12 @@ using ListaFaces = std::vector<Face>;
 using Posicao = std::pair<int, int>;
 
 struct Poligono {
-  Vertice posicao;
+  Vetor3D posicao = { 0, 0, 0 };
+  Vetor3D rotacao = { 0 ,0 ,0 };
+  Vetor3D escala  = { 1, 1, 1 };
+
   ListaVertices vertices;
   ListaFaces faces;
-  float rotacao = 0;
   int callList = -1;
 };
 
@@ -42,6 +46,7 @@ struct Mouse {
 
 Poligono criar_cubo(double x, double y, double z, double tamanho);
 Poligono load_obj(std::string fname);
+void setup_drawing(Poligono& obj);
 void desenhar(Poligono& cubo);
 void display();
 void keyboard(unsigned char key, int x, int y);
@@ -56,14 +61,21 @@ Mouse mouse;
 int main(int argc, char** argv) {
   glutInitWindowSize(512, 512);
 
-  //obj = criar_cubo(0, 0, 0, 50);
-  obj = load_obj("..\\..\\res\\elepham.obj");
-
   glutInit(&argc, argv);
-  glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
   glutCreateWindow("Wireframe");
   glClearColor(1.0, 1.0, 1.0, 1.0);
-  glOrtho(-100, 100, -100, 100, -100, 100);
+
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
+  glOrtho(-100, 100, -100, 100, -200, 200);
+  glMatrixMode(GL_MODELVIEW);
+
+  glEnable(GL_DEPTH_TEST);
+  glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+
+  obj = load_obj("");
+
+  setup_drawing(obj);
 
   glutDisplayFunc(display);
   glutKeyboardFunc(keyboard);
@@ -100,9 +112,11 @@ Poligono criar_cubo(double x, double y, double z, double tamanho) {
 }
 
 void display() {
-  glClear(GL_COLOR_BUFFER_BIT);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
   desenhar(obj);
-  glFlush();
+
+  glutSwapBuffers();
 }
 
 void redraw(int value) {
@@ -112,9 +126,11 @@ void redraw(int value) {
 
 void desenhar(Poligono& obj) {
   glPushMatrix();
-  //glTranslatef(0, -40.00, -105);
-  //glScalef(0.4, 0.4, 0.4);
-  //glRotatef(obj.rotacao, 0, 1, 0);
+  glTranslatef(obj.posicao.x, obj.posicao.y, obj.posicao.z);
+  glRotatef(obj.rotacao.x, 1, 0, 0);
+  glRotatef(obj.rotacao.y, 0, 1, 0);
+  glRotatef(obj.rotacao.z, 0, 0, 1);
+  glScalef(obj.escala.x, obj.escala.y, obj.escala.z);
   glCallList(obj.callList);
   glPopMatrix();
 }
@@ -123,62 +139,18 @@ void movimentar(Poligono& cubo, double dx, double dy, double dz) {
   cubo.posicao.x += dx;
   cubo.posicao.y += dy;
   cubo.posicao.z += dz;
-  for (auto& v : cubo.vertices) {
-    v.x += dx;
-    v.y += dy;
-    v.z += dz;
-  }
-}
-
-void escalar(Poligono& cubo, double sx, double sy, double sz) {
-  for (auto& v : cubo.vertices) {
-    v.x *= sx;
-    v.y *= sy;
-    v.z *= sz;
-  }
 }
 
 void rotacionar(Poligono& cubo, double anguloX, double anguloY, double anguloZ) {
-  const double radX = anguloX * std::numbers::pi / 180.0;
-  const double radY = anguloY * std::numbers::pi / 180.0;
-  const double radZ = anguloZ * std::numbers::pi / 180.0;
+  cubo.rotacao.x += anguloX * 180 / std::numbers::pi;
+  cubo.rotacao.y += anguloY * 180 / std::numbers::pi;
+  cubo.rotacao.z += anguloZ * 180 / std::numbers::pi;
+}
 
-  const double centerX = cubo.posicao.x;
-  const double centerY = cubo.posicao.y;
-  const double centerZ = cubo.posicao.z;
-
-  for (Vertice& vertice : cubo.vertices) {
-    double x = vertice.x - centerX;
-    double y = vertice.y - centerY;
-    double z = vertice.z - centerZ;
-
-    // Rotação em X
-    double novoY = y * cos(anguloX) - z * sin(anguloX);
-    double novoZ = y * sin(anguloX) + z * cos(anguloX);
-    y = novoY;
-    z = novoZ;
-
-    // Rotação em Y
-    double novoX = x * cos(anguloY) + z * sin(anguloY);
-    z = -x * sin(anguloY) + z * cos(anguloY);
-    x = novoX;
-
-    // Rotação em Z
-    double novoX2 = x * cos(anguloZ) - y * sin(anguloZ);
-    double novoY2 = x * sin(anguloZ) + y * cos(anguloZ);
-    x = novoX2;
-    y = novoY2;
-
-    // Translação de volta (somando as coordenadas do centro)
-    x += centerX;
-    y += centerY;
-    z += centerZ;
-
-    // Atualiza as coordenadas
-    vertice.x = x;
-    vertice.y = y;
-    vertice.z = z;
-  }
+void escalar(Poligono& cubo, double sx, double sy, double sz) {
+  cubo.escala.x *= sx;
+  cubo.escala.y *= sy;
+  cubo.escala.z *= sz;
 }
 
 void keyboard(unsigned char key, int x, int y) {
@@ -219,25 +191,25 @@ void mouse_move(int x, int y) {
 
 void setup_drawing(Poligono& obj) {
   obj.callList = glGenLists(1);
-  glPointSize(2.0);
   glNewList(obj.callList, GL_COMPILE);
   {
-    glPushMatrix();
+    std::cout << "Vertices: " << obj.vertices.size() << std::endl;
+    std::cout << "Faces: " << obj.faces.size() << std::endl;
+    glPointSize(2.0);
+    glColor3f(0.0, 0.0, 0.0);
     glBegin(GL_LINES);
 
-    for (const Face& face : obj.faces)
-    {
-      for (const Aresta& Aresta : face.arestas) {
-        const Vertice& v1 = obj.vertices[Aresta.v1];
-        const Vertice& v2 = obj.vertices[Aresta.v2];
+    for (const Face& face : obj.faces) {
+      for (const Aresta& aresta : face.arestas) {
+        const Vertice& v1 = obj.vertices[aresta.v1];
+        const Vertice& v2 = obj.vertices[aresta.v2];
         glVertex3f(v1.x, v1.y, v1.z);
         glVertex3f(v2.x, v2.y, v2.z);
       }
     }
-    glEnd();
 
+    glEnd();
   }
-  glPopMatrix();
   glEndList();
 }
 
@@ -277,8 +249,6 @@ Poligono load_obj(std::string fname)
       }
     }
   }
-
-  setup_drawing(obj);
 
   arquivo.close();
   return obj;
