@@ -13,9 +13,8 @@
 
 class Vector3D {
 public:
-
-  double x, y, z;
-  Vector3D(double x = 0, double y = 0 , double z = 0) : x(x), y(y), z(z) {}
+  float x, y, z;
+  Vector3D(float x = 0, float y = 0, float z = 0) : x(x), y(y), z(z) {}
   Vector3D(const Vector3D& other) : x(other.x), y(other.y), z(other.z) {}
 
   Vector3D operator+(const Vector3D& other) const {
@@ -24,7 +23,7 @@ public:
   Vector3D operator-(const Vector3D& other) const {
     return Vector3D(x - other.x, y - other.y, z - other.z);
   }
-  Vector3D operator/(double scalar) const {
+  Vector3D operator/(const float scalar) const {
     return Vector3D(x / scalar, y / scalar, z / scalar);
   }
   void operator=(const Vector3D& other) {
@@ -71,12 +70,12 @@ struct Poligono {
 struct Mouse {
   Posicao posicao = { -1, -1 };
   int botao = -1;
-  float sense = .4;
+  float sense = .4f;
 };
 
 Vetor3D pCamera ;
 
-Poligono criar_cubo(double x, double y, double z, double tamanho);
+Poligono criar_cubo(float x, float y, float z, float tamanho);
 Poligono carregar_obj(std::string fname);
 void definir_desenho(Poligono& obj);
 void desenhar(Poligono& cubo);
@@ -95,7 +94,7 @@ int main(int argc, char** argv) {
 
   glutInit(&argc, argv);
   glutCreateWindow("Wireframe");
-  glClearColor(1.0, 1.0, 1.0, 1.0);
+  glClearColor(1.f, 1.f, 1.f, 1.f);
 
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
@@ -105,7 +104,7 @@ int main(int argc, char** argv) {
   glEnable(GL_DEPTH_TEST);
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
 
-  obj = criar_cubo(0, 0, 0, 50);
+  obj = criar_cubo(0.f, 0.f, 0.f, 50.f);
   //obj = load_obj("");
 
   definir_desenho(obj);
@@ -121,11 +120,11 @@ int main(int argc, char** argv) {
   return 0;
 }
 
-Poligono criar_cubo(double x, double y, double z, double tamanho) {
+Poligono criar_cubo(float x, float y, float z, float tamanho) {
   Poligono novo_cubo;
   novo_cubo.posicao = { x, y, z };
 
-  double t = tamanho / 2.0;
+  float t = tamanho / 2.f;
   novo_cubo.vertices = {
       {-t, -t, -t}, { t, -t, -t}, { t,  t, -t}, {-t,  t, -t},
       {-t, -t,  t}, { t, -t,  t}, { t,  t,  t}, {-t,  t,  t}
@@ -178,19 +177,19 @@ void desenhar(Poligono& obj) {
   glPopMatrix();
 }
 
-void movimentar(Poligono& cubo, double dx, double dy, double dz) {
+void movimentar(Poligono& cubo, float dx, float dy, float dz) {
   cubo.posicao.x += dx;
   cubo.posicao.y += dy;
   cubo.posicao.z += dz;
 }
 
-void rotacionar(Poligono& cubo, double anguloX, double anguloY, double anguloZ) {
-  cubo.rotacao.x += anguloX * 180 / std::numbers::pi;
-  cubo.rotacao.y += anguloY * 180 / std::numbers::pi;
-  cubo.rotacao.z += anguloZ * 180 / std::numbers::pi;
+void rotacionar(Poligono& cubo, float anguloX, float anguloY, float anguloZ) {
+  cubo.rotacao.x += anguloX * 180.f / (float)std::numbers::pi;
+  cubo.rotacao.y += anguloY * 180.f / (float)std::numbers::pi;
+  cubo.rotacao.z += anguloZ * 180.f / (float)std::numbers::pi;
 }
 
-void escalar(Poligono& cubo, double sx, double sy, double sz) {
+void escalar(Poligono& cubo, float sx, float sy, float sz) {
   cubo.escala.x *= sx;
   cubo.escala.y *= sy;
   cubo.escala.z *= sz;
@@ -198,15 +197,15 @@ void escalar(Poligono& cubo, double sx, double sy, double sz) {
 
 void keyboard(unsigned char key, int x, int y) {
   switch (key) {
-  case '+': escalar(obj, 1.1, 1.1, 1.1); break;
-  case '-': escalar(obj, 0.9, 0.9, 0.9); break;
-  case 'x': escalar(obj, 1.1, 1, 1); break;
-  case 'y': escalar(obj, 1, 1.1, 1); break;
-  case 'z': escalar(obj, 1, 1, 1.1); break;
+  case '+': escalar(obj, 1.1f, 1.1f, 1.1f); break;
+  case '-': escalar(obj, 0.9f, 0.9f, 0.9f); break;
+  case 'x': escalar(obj, 1.1f, 1.f, 1.f); break;
+  case 'y': escalar(obj, 1.f, 1.1f, 1.f); break;
+  case 'z': escalar(obj, 1.f, 1.f, 1.1f); break;
     // SHIFT
-  case 'X': escalar(obj, .9, 1, 1); break;
-  case 'Y': escalar(obj, 1, .9, 1); break;
-  case 'Z': escalar(obj, 1, 1, .9); break;
+  case 'X': escalar(obj, .9f, 1.f, 1.f); break;
+  case 'Y': escalar(obj, 1.f, .9f, 1.f); break;
+  case 'Z': escalar(obj, 1.f, 1.f, .9f); break;
   case ' ': exit(0); break;
   }
 }
@@ -221,16 +220,16 @@ void mouse_move(int x, int y) {
     mouse.posicao = { x, y };
 
   if (mouse.botao == GLUT_LEFT_BUTTON) {
-    const double offsetX = (x - mouse.posicao.first) * mouse.sense;
-    const double offsetY = (mouse.posicao.second - y) * mouse.sense;
+    const float offsetX = (x - mouse.posicao.first) * mouse.sense;
+    const float offsetY = (mouse.posicao.second - y) * mouse.sense;
 
     movimentar(obj, offsetX, offsetY, 0);
   }
   else if (mouse.botao == GLUT_RIGHT_BUTTON) {
-    const double offsetX = x - mouse.posicao.first;
-    const double offsetY = y - mouse.posicao.second;
-    const double grauX = offsetX / 180 * -1;
-    const double grauY = offsetY / 180 * -1;
+    const int offsetX = x - mouse.posicao.first;
+    const int offsetY = y - mouse.posicao.second;
+    const float grauX = offsetX / 180.f * -1;
+    const float grauY = offsetY / 180.f * -1;
 
     rotacionar(obj, grauY, grauX, 0);
   }
@@ -248,7 +247,6 @@ void definir_desenho(Poligono& obj) {
     glCullFace(GL_BACK);
 
     for (const Face& face : obj.faces) {
-
       const Vertice& a = obj.vertices[face.v1];
       const Vertice& b = obj.vertices[face.v2];
       const Vertice& c = obj.vertices[face.v3];
@@ -262,7 +260,7 @@ void definir_desenho(Poligono& obj) {
         ab.x * ac.y - ab.y * ac.x
       );
 
-      double comprimento = std::sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
+      float comprimento = std::sqrtf(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
       Vector3D normalUnit = normal / comprimento;
 
       glNormal3f(normalUnit.x, normalUnit.y, normalUnit.z);
@@ -279,8 +277,6 @@ void definir_desenho(Poligono& obj) {
 
 Poligono carregar_obj(std::string fname)
 {
-  int read;
-  float x, y, z;
   std::ifstream arquivo(fname);
   Poligono obj;
   if (!arquivo.is_open()) {
