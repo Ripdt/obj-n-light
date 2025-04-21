@@ -5,6 +5,7 @@
 #include <tuple>
 #include <numbers>
 #include <fstream>
+#include <sstream>
 #include <string>
 #include <math.h>
 
@@ -33,39 +34,33 @@ public:
   }
 };
 
-typedef Vector3D Vetor3D;
-typedef Vetor3D Vertice;
-
-class Linha {
-public:
-  Vetor3D v1, v2;
-  Linha(const Vetor3D& _v1, const Vetor3D& _v2) : v1(_v1), v2(_v2) {}
+struct Vector2D {
+  float x, y;
 };
 
-struct Aresta {
-  int v1, v2;
+struct VerticeFace {
+  int indiceV, indiceVN = -1, indiceVT = -1;
 };
-
-using ListaVertices = std::vector<Vertice>;
-using ListaArestas = std::vector<Aresta>;
 
 struct Face {
-  int v1, v2, v3;
+  std::vector<VerticeFace> v;
 };
 
 using ListaFaces = std::vector<Face>;
 
-using Posicao = std::pair<int, int>;
-
 struct Poligono {
-  Vetor3D posicao = { 0, 0, 0 };
-  Vetor3D rotacao = { 0 ,0 ,0 };
-  Vetor3D escala  = { 1, 1, 1 };
+  Vector3D posicao = { 0, 0, 0 };
+  Vector3D rotacao = { 0 ,0 ,0 };
+  Vector3D escala  = { 1, 1, 1 };
 
-  ListaVertices vertices;
+  std::vector<Vector3D> vertices, normais;
+  std::vector<Vector2D> texturas;
   ListaFaces faces;
+
   int callList = -1;
 };
+
+using Posicao = std::pair<int, int>;
 
 struct Mouse {
   Posicao posicao = { -1, -1 };
@@ -73,9 +68,6 @@ struct Mouse {
   float sense = .4f;
 };
 
-Vetor3D pCamera ;
-
-Poligono criar_cubo(float x, float y, float z, float tamanho);
 Poligono carregar_obj(std::string fname);
 void definir_desenho(Poligono& obj);
 void desenhar(Poligono& cubo);
@@ -104,9 +96,7 @@ int main(int argc, char** argv) {
   glEnable(GL_DEPTH_TEST);
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
 
-  obj = criar_cubo(0.f, 0.f, 0.f, 50.f);
-  //obj = load_obj("");
-
+  obj = carregar_obj("../res/cubo.obj");
   definir_desenho(obj);
 
   glutDisplayFunc(display);
@@ -118,38 +108,6 @@ int main(int argc, char** argv) {
 
   glutMainLoop();
   return 0;
-}
-
-Poligono criar_cubo(float x, float y, float z, float tamanho) {
-  Poligono novo_cubo;
-  novo_cubo.posicao = { x, y, z };
-
-  float t = tamanho / 2.f;
-  novo_cubo.vertices = {
-      {-t, -t, -t}, { t, -t, -t}, { t,  t, -t}, {-t,  t, -t},
-      {-t, -t,  t}, { t, -t,  t}, { t,  t,  t}, {-t,  t,  t}
-  };
-
-  ListaArestas face1 = { {0, 1}, {1, 2}, {2, 3}, {3, 0} };
-  ListaArestas face2 = { {4, 5}, {5, 6}, {6, 7}, {7, 4} };
-  ListaArestas face3 = { {0, 4}, {1, 5}, {2, 6}, {3, 7} };
-
-  novo_cubo.faces = {
-    { 0, 1, 2 },
-    { 0, 2, 3 },
-    { 4, 5, 6 },
-    { 4, 6, 7 },
-    { 0, 1, 5 },
-    { 0, 5, 4 },
-    { 1, 2, 6 },
-    { 1, 6, 5 },
-    { 2, 3, 7 },
-    { 2, 7, 6 },
-    { 3, 0, 4 },
-    { 3, 4, 7 }
-  };
-
-  return novo_cubo;
 }
 
 void display() {
@@ -237,40 +195,116 @@ void mouse_move(int x, int y) {
   mouse.posicao = { x, y };
 }
 
+Vector3D normal_triangulo(const Face& face, size_t idx) {
+  size_t idxA = idx, idxB = -1, idxC = -1;
+  switch (idx) {
+  case 0:
+    idxB = 1; idxC = 2;
+    break;
+  case 1:
+    idxB = 0; idxC = 2;
+    break;
+  case 2:
+    idxB = 1; idxC = 0;
+    break;
+  }
+
+  const Vector3D& a = obj.vertices[face.v[idxA].indiceV];
+  const Vector3D& b = obj.vertices[face.v[idxB].indiceV];
+  const Vector3D& c = obj.vertices[face.v[idxC].indiceV];
+
+  const Vector3D ab = b - a;
+  const Vector3D ac = c - a;
+
+  const Vector3D normal = {
+    ab.y * ac.z - ab.z * ac.y,
+    ab.z * ac.x - ab.x * ac.z,
+    ab.x * ac.y - ab.y * ac.x
+  };
+
+  float comprimento = std::sqrtf(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
+  return normal / comprimento;
+}
+
+void desenhar_triangulo(const Face& face) {
+  glBegin(GL_TRIANGLES);
+
+  for (size_t i = 0; i < face.v.size(); i++) {
+    const VerticeFace& vf = face.v[i];
+    if (vf.indiceVN > -1) {
+      const Vector3D& normalOBJ = obj.normais[vf.indiceVN];
+      glNormal3f(normalOBJ.x, normalOBJ.y, normalOBJ.z);
+    }
+    else {
+      const Vector3D normal = normal_triangulo(face, i);
+      glNormal3f(normal.x, normal.y, normal.z);
+    }
+
+    if (vf.indiceVT > -1) {
+      const Vector2D& textura = obj.texturas[vf.indiceVT];
+      glTexCoord2f(textura.x, textura.y);
+    }
+    
+    const Vector3D& vertice = obj.vertices[vf.indiceV];
+    glVertex3f(vertice.x, vertice.y, vertice.z);
+  }
+  glEnd();
+}
+
+void desenhar_quadrado(const Face& face) {
+  glBegin(GL_QUADS);
+  for (const VerticeFace& vf : face.v) {
+    if (vf.indiceVN > -1) {
+      const Vector3D& normal = obj.normais[vf.indiceVN];
+      glNormal3f(normal.x, normal.y, normal.z);
+    }
+
+    if (vf.indiceVT > -1) {
+      const Vector2D& textura = obj.texturas[vf.indiceVT];
+      glTexCoord2f(textura.x, textura.y);
+    }
+
+    const Vector3D& vertice = obj.vertices[vf.indiceV];
+    glVertex3f(vertice.x, vertice.y, vertice.z);
+  }
+  glEnd();
+}
+
+void desenhar_poligono(const Face& face) {
+  glBegin(GL_POLYGON);
+  for (const VerticeFace& vf : face.v) {
+    if (vf.indiceVN > -1) {
+      const Vector3D& normal = obj.normais[vf.indiceVN];
+      glNormal3f(normal.x, normal.y, normal.z);
+    }
+
+    if (vf.indiceVT > -1) {
+      const Vector2D& textura = obj.texturas[vf.indiceVT];
+      glTexCoord2f(textura.x, textura.y);
+    }
+
+    const Vector3D& vertice = obj.vertices[vf.indiceV];
+    glVertex3f(vertice.x, vertice.y, vertice.z);
+  }
+  glEnd();
+}
+
 void definir_desenho(Poligono& obj) {
   obj.callList = glGenLists(1);
   glNewList(obj.callList, GL_COMPILE);
   {
     glColor3d(0, 1, 0);
-    glBegin(GL_TRIANGLES);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
 
     for (const Face& face : obj.faces) {
-      const Vertice& a = obj.vertices[face.v1];
-      const Vertice& b = obj.vertices[face.v2];
-      const Vertice& c = obj.vertices[face.v3];
-
-      Vector3D ab = b - a;
-      Vector3D ac = c - a;
-
-      Vector3D normal(
-        ab.y * ac.z - ab.z * ac.y,
-        ab.z * ac.x - ab.x * ac.z,
-        ab.x * ac.y - ab.y * ac.x
-      );
-
-      float comprimento = std::sqrtf(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
-      Vector3D normalUnit = normal / comprimento;
-
-      glNormal3f(normalUnit.x, normalUnit.y, normalUnit.z);
-
-      glVertex3f(a.x, a.y, a.z);
-      glVertex3f(b.x, b.y, b.z);
-      glVertex3f(c.x, c.y, c.z);
+      if (face.v.size() == 3)
+        desenhar_triangulo(face);
+      else if (face.v.size() == 4)
+        desenhar_quadrado(face);
+      else
+        desenhar_poligono(face);
     }
-
-    glEnd();
   }
   glEndList();
 }
@@ -284,28 +318,63 @@ Poligono carregar_obj(std::string fname)
     exit(1);
   }
   else {
-    std::string tipo;
-    while (arquivo >> tipo)
+    std::string linhaArquivo;
+    while (std::getline(arquivo, linhaArquivo))
     {
-
-      if (tipo == "v")
-      {
+      std::istringstream linha(linhaArquivo);
+      std::string tipo;
+      linha >> tipo;
+      if (tipo == "v") {
         float x, y, z;
-        arquivo >> x >> y >> z;
-        Vertice vertice = { x, y, z };
+        linha >> x >> y >> z;
+        Vector3D vertice(x, y, z);
         obj.vertices.push_back(vertice);
       }
+      else if (tipo == "vn") {
+        float nx, ny, nz;
+        linha >> nx >> ny >> nz;
+        Vector3D normal(nx, ny, nz);
+        obj.normais.push_back(normal);
+      }
+      else if (tipo == "vt") {
+        float u, v;
+        linha >> u >> v;
+        Vector2D textura(u, v);
+        obj.texturas.push_back(textura);
+      }
+      else if (tipo == "f") {
+        Face face;
+        std::string vert;
+        int vIdx = 0;
+        while (linha >> vert) {
+          std::istringstream vss(vert);
+          std::string idx;
+          VerticeFace fv;
 
-      if (tipo == "f")
-      {
-        std::string x, y, z;
-        arquivo >> x >> y >> z;
-        int fp = stoi(x.substr(0, x.find("/"))) - 1;
-        int fs = stoi(y.substr(0, y.find("/"))) - 1;
-        int ft = stoi(z.substr(0, z.find("/"))) - 1;
-        Face face = {fp, fs, ft};
+          std::getline(vss, idx, '/'); 
+          fv.indiceV = std::stoi(idx) - 1;
+
+          if (std::getline(vss, idx, '/') && idx != "")
+            fv.indiceVT = std::stoi(idx) - 1;
+
+          if (std::getline(vss, idx, '/') && idx != "")
+            fv.indiceVN = std::stoi(idx) - 1;
+
+          face.v.push_back(fv);
+        }
         obj.faces.push_back(face);
       }
+    }
+  }
+
+  const size_t totalVertices = obj.vertices.size();
+  const size_t totalNormais = obj.normais.size();
+  const size_t totalTexturas = obj.texturas.size();
+  for (Face& face : obj.faces) {
+    for (VerticeFace& vf : face.v) {
+      vf.indiceV = vf.indiceV < 0 ? totalVertices + vf.indiceV : vf.indiceV;
+      vf.indiceVN = vf.indiceVN < 0 ? totalNormais + vf.indiceVN : vf.indiceVN;
+      vf.indiceVT = vf.indiceVT < 0 ? totalTexturas + vf.indiceVT : vf.indiceVT;
     }
   }
 
