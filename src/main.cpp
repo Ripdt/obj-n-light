@@ -39,7 +39,7 @@ struct Vector2D {
 };
 
 struct VerticeFace {
-  int indiceV, indiceVN = -1, indiceVT = -1;
+  int indiceV = -1, indiceVN = -1, indiceVT = -1;
 };
 
 struct Face {
@@ -367,9 +367,9 @@ Poligono carregar_obj(std::string fname)
     }
   }
 
-  const size_t totalVertices = obj.vertices.size();
-  const size_t totalNormais = obj.normais.size();
-  const size_t totalTexturas = obj.texturas.size();
+  const int totalVertices = static_cast<int>(obj.vertices.size());
+  const int totalNormais = static_cast<int>(obj.normais.size());
+  const int totalTexturas = static_cast<int>(obj.texturas.size());
   for (Face& face : obj.faces) {
     for (VerticeFace& vf : face.v) {
       vf.indiceV = vf.indiceV < 0 ? totalVertices + vf.indiceV : vf.indiceV;
