@@ -12,6 +12,8 @@
 #define LARGURA 512
 #define ALTURA 512
 
+bool luzAtiva[3] = { true, true, true };
+
 class Vector3D {
 public:
   float x, y, z;
@@ -36,7 +38,10 @@ public:
 
 struct Vector2D {
   float x, y;
+
+  Vector2D(float x = 0, float y = 0) : x(x), y(y) {}
 };
+
 
 struct VerticeFace {
   int indiceV = -1, indiceVN = -1, indiceVT = -1;
@@ -81,6 +86,53 @@ Poligono obj;
 int delay = 10;
 Mouse mouse;
 
+
+void configurar_luzes() {
+  glEnable(GL_LIGHTING);
+
+  // Luz 0 - lateral
+  GLfloat luz0_amb[]  = { 0.2f, 0.2f, 0.2f, 1.0f };
+  GLfloat luz0_dif[]  = { 0.8f, 0.8f, 0.8f, 1.0f };
+  GLfloat luz0_esp[]  = { 1.0f, 1.0f, 1.0f, 1.0f };
+  GLfloat pos0[]      = { 50.0f, 0.0f, 100.0f, 1.0f };
+
+  glLightfv(GL_LIGHT0, GL_AMBIENT, luz0_amb);
+  glLightfv(GL_LIGHT0, GL_DIFFUSE, luz0_dif);
+  glLightfv(GL_LIGHT0, GL_SPECULAR, luz0_esp);
+  glLightfv(GL_LIGHT0, GL_POSITION, pos0);
+  glEnable(GL_LIGHT0);
+
+  // Luz 1 - superior
+  GLfloat luz1_amb[]  = { 0.1f, 0.1f, 0.1f, 1.0f };
+  GLfloat luz1_dif[]  = { 0.6f, 0.6f, 0.6f, 1.0f };
+  GLfloat luz1_esp[]  = { 0.8f, 0.8f, 0.8f, 1.0f };
+  GLfloat pos1[]      = { 0.0f, 80.0f, 100.0f, 1.0f };
+
+  glLightfv(GL_LIGHT1, GL_AMBIENT, luz1_amb);
+  glLightfv(GL_LIGHT1, GL_DIFFUSE, luz1_dif);
+  glLightfv(GL_LIGHT1, GL_SPECULAR, luz1_esp);
+  glLightfv(GL_LIGHT1, GL_POSITION, pos1);
+  glEnable(GL_LIGHT1);
+
+  // Luz 2 - inferior
+  GLfloat luz2_amb[]  = { 0.1f, 0.1f, 0.1f, 1.0f };
+  GLfloat luz2_dif[]  = { 0.5f, 0.5f, 0.5f, 1.0f };
+  GLfloat luz2_esp[]  = { 0.5f, 0.5f, 0.5f, 1.0f };
+  GLfloat pos2[]      = { 0.0f, -80.0f, 100.0f, 1.0f };
+
+  glLightfv(GL_LIGHT2, GL_AMBIENT, luz2_amb);
+  glLightfv(GL_LIGHT2, GL_DIFFUSE, luz2_dif);
+  glLightfv(GL_LIGHT2, GL_SPECULAR, luz2_esp);
+  glLightfv(GL_LIGHT2, GL_POSITION, pos2);
+  glEnable(GL_LIGHT2);
+
+  // Luz ambiente global fraca (sempre ativa)
+  GLfloat ambiente_global[] = { 0.1f, 0.1f, 0.1f, 1.0f };
+  glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambiente_global);
+
+}
+
+
 int main(int argc, char** argv) {
   glutInitWindowSize(LARGURA, ALTURA);
 
@@ -95,6 +147,8 @@ int main(int argc, char** argv) {
 
   glEnable(GL_DEPTH_TEST);
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+
+  configurar_luzes();
 
   obj = carregar_obj("../res/cubo.obj");
   definir_desenho(obj);
@@ -112,6 +166,13 @@ int main(int argc, char** argv) {
 
 void display() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 1.0 };
+  GLfloat mat_shininess[] = { 50.0 };
+
+  glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+  glMaterialf(GL_FRONT, GL_SHININESS, *mat_shininess);
+
 
   desenhar(obj);
 
@@ -155,16 +216,29 @@ void escalar(Poligono& cubo, float sx, float sy, float sz) {
 
 void keyboard(unsigned char key, int x, int y) {
   switch (key) {
-  case '+': escalar(obj, 1.1f, 1.1f, 1.1f); break;
-  case '-': escalar(obj, 0.9f, 0.9f, 0.9f); break;
-  case 'x': escalar(obj, 1.1f, 1.f, 1.f); break;
-  case 'y': escalar(obj, 1.f, 1.1f, 1.f); break;
-  case 'z': escalar(obj, 1.f, 1.f, 1.1f); break;
-    // SHIFT
-  case 'X': escalar(obj, .9f, 1.f, 1.f); break;
-  case 'Y': escalar(obj, 1.f, .9f, 1.f); break;
-  case 'Z': escalar(obj, 1.f, 1.f, .9f); break;
-  case ' ': exit(0); break;
+    case '+': escalar(obj, 1.1f, 1.1f, 1.1f); break;
+    case '-': escalar(obj, 0.9f, 0.9f, 0.9f); break;
+    case 'x': escalar(obj, 1.1f, 1.f, 1.f); break;
+    case 'y': escalar(obj, 1.f, 1.1f, 1.f); break;
+    case 'z': escalar(obj, 1.f, 1.f, 1.1f); break;
+      // SHIFT
+    case 'X': escalar(obj, .9f, 1.f, 1.f); break;
+    case 'Y': escalar(obj, 1.f, .9f, 1.f); break;
+    case 'Z': escalar(obj, 1.f, 1.f, .9f); break;
+    case ' ': exit(0); break;
+    case '1':
+      luzAtiva[0] = !luzAtiva[0];
+      luzAtiva[0] ? glEnable(GL_LIGHT0) : glDisable(GL_LIGHT0);
+      break;
+    case '2':
+      luzAtiva[1] = !luzAtiva[1];
+      luzAtiva[1] ? glEnable(GL_LIGHT1) : glDisable(GL_LIGHT1);
+      break;
+    case '3':
+      luzAtiva[2] = !luzAtiva[2];
+      luzAtiva[2] ? glEnable(GL_LIGHT2) : glDisable(GL_LIGHT2);
+      break;
+
   }
 }
 
@@ -293,11 +367,18 @@ void definir_desenho(Poligono& obj) {
   obj.callList = glGenLists(1);
   glNewList(obj.callList, GL_COMPILE);
   {
-    glColor3d(0, 1, 0);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
 
+    bool vermelho = true;
     for (const Face& face : obj.faces) {
+      if (vermelho)
+        glColor3d(1, 0, 0);
+      else
+        glColor3d(0, 0, 0);
+
+      vermelho = !vermelho;
+
       if (face.v.size() == 3)
         desenhar_triangulo(face);
       else if (face.v.size() == 4)

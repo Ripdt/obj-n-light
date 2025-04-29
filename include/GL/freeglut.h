@@ -1,5 +1,6 @@
 #ifndef  __FREEGLUT_H__
 #define  __FREEGLUT_H__
+#define GL_SILENCE_DEPRECATION
 
 /*
  * freeglut.h
@@ -14,6 +15,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <GL/freeglut.h>
 #include "freeglut_std.h"
 #include "freeglut_ext.h"
 
