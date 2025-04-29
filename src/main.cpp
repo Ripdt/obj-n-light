@@ -86,15 +86,33 @@ Poligono obj;
 int delay = 10;
 Mouse mouse;
 
+void configurar_material() {
+  // Cor ambiente do material (reage à luz ambiente global)
+  GLfloat mat_amb[] = { 0.2f, 0.2f, 0.2f, 1.0f };
+
+  // Cor difusa do material (reage à luz difusa das fontes)
+  GLfloat mat_dif[] = { 0.5f, 0.5f, 0.5f, 1.0f };
+
+  // Cor especular do material (reflexos brilhantes)
+  GLfloat mat_esp[] = { 0.8f, 0.8f, 0.8f, 1.0f };
+
+  // Brilho especular (quanto maior, mais focado o brilho)
+  GLfloat brilho[] = { 30.0f };
+
+  glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, mat_amb);
+  glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, mat_dif);
+  glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, mat_esp);
+  glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, brilho);
+}
 
 void configurar_luzes() {
   glEnable(GL_LIGHTING);
 
-  // Luz 0 - lateral
-  GLfloat luz0_amb[]  = { 0.2f, 0.2f, 0.2f, 1.0f };
-  GLfloat luz0_dif[]  = { 0.8f, 0.8f, 0.8f, 1.0f };
-  GLfloat luz0_esp[]  = { 1.0f, 1.0f, 1.0f, 1.0f };
-  GLfloat pos0[]      = { 50.0f, 0.0f, 100.0f, 1.0f };
+  // Luz 0 - Lateral
+  GLfloat luz0_amb[] = { 0.2f, 0.2f, 0.2f, 1.0f };  // Luz ambiente mais suave
+  GLfloat luz0_dif[] = { 0.5f, 0.5f, 0.5f, 1.0f };  // Luz difusa mais suave
+  GLfloat luz0_esp[] = { 0.8f, 0.8f, 0.8f, 1.0f };  // Reflexos mais suaves
+  GLfloat pos0[]     = { 50.0f, 0.0f, 100.0f, 1.0f };
 
   glLightfv(GL_LIGHT0, GL_AMBIENT, luz0_amb);
   glLightfv(GL_LIGHT0, GL_DIFFUSE, luz0_dif);
@@ -102,11 +120,11 @@ void configurar_luzes() {
   glLightfv(GL_LIGHT0, GL_POSITION, pos0);
   glEnable(GL_LIGHT0);
 
-  // Luz 1 - superior
-  GLfloat luz1_amb[]  = { 0.1f, 0.1f, 0.1f, 1.0f };
-  GLfloat luz1_dif[]  = { 0.6f, 0.6f, 0.6f, 1.0f };
-  GLfloat luz1_esp[]  = { 0.8f, 0.8f, 0.8f, 1.0f };
-  GLfloat pos1[]      = { 0.0f, 80.0f, 100.0f, 1.0f };
+  // Luz 1 - Superior
+  GLfloat luz1_amb[] = { 0.2f, 0.2f, 0.2f, 1.0f };  // Luz ambiente mais suave
+  GLfloat luz1_dif[] = { 0.5f, 0.5f, 0.5f, 1.0f };  // Luz difusa mais suave
+  GLfloat luz1_esp[] = { 0.8f, 0.8f, 0.8f, 1.0f };  // Reflexos mais suaves
+  GLfloat pos1[]     = { 0.0f, 80.0f, 100.0f, 1.0f };
 
   glLightfv(GL_LIGHT1, GL_AMBIENT, luz1_amb);
   glLightfv(GL_LIGHT1, GL_DIFFUSE, luz1_dif);
@@ -114,11 +132,11 @@ void configurar_luzes() {
   glLightfv(GL_LIGHT1, GL_POSITION, pos1);
   glEnable(GL_LIGHT1);
 
-  // Luz 2 - inferior
-  GLfloat luz2_amb[]  = { 0.1f, 0.1f, 0.1f, 1.0f };
-  GLfloat luz2_dif[]  = { 0.5f, 0.5f, 0.5f, 1.0f };
-  GLfloat luz2_esp[]  = { 0.5f, 0.5f, 0.5f, 1.0f };
-  GLfloat pos2[]      = { 0.0f, -80.0f, 100.0f, 1.0f };
+  // Luz 2 - Inferior
+  GLfloat luz2_amb[] = { 0.2f, 0.2f, 0.2f, 1.0f };  // Luz ambiente mais suave
+  GLfloat luz2_dif[] = { 0.5f, 0.5f, 0.5f, 1.0f };  // Luz difusa mais suave
+  GLfloat luz2_esp[] = { 0.8f, 0.8f, 0.8f, 1.0f };  // Reflexos mais suaves
+  GLfloat pos2[]     = { 0.0f, -80.0f, 100.0f, 1.0f };
 
   glLightfv(GL_LIGHT2, GL_AMBIENT, luz2_amb);
   glLightfv(GL_LIGHT2, GL_DIFFUSE, luz2_dif);
@@ -126,11 +144,11 @@ void configurar_luzes() {
   glLightfv(GL_LIGHT2, GL_POSITION, pos2);
   glEnable(GL_LIGHT2);
 
-  // Luz ambiente global fraca (sempre ativa)
-  GLfloat ambiente_global[] = { 0.1f, 0.1f, 0.1f, 1.0f };
+  // Luz ambiente global (ativa mesmo se outras luzes forem desativadas)
+  GLfloat ambiente_global[] = { 0.1f, 0.1f, 0.1f, 1.0f };  // Luz ambiente suave
   glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambiente_global);
-
 }
+
 
 
 int main(int argc, char** argv) {
@@ -150,7 +168,7 @@ int main(int argc, char** argv) {
 
   configurar_luzes();
 
-  obj = carregar_obj("../res/cubo.obj");
+  obj = carregar_obj("/Users/joao.prudencio/Documents/GitHub/obj-n-light/res/elepham.obj");
   definir_desenho(obj);
 
   glutDisplayFunc(display);
@@ -173,6 +191,7 @@ void display() {
   glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
   glMaterialf(GL_FRONT, GL_SHININESS, *mat_shininess);
 
+  configurar_material();
 
   desenhar(obj);
 
