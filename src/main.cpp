@@ -168,7 +168,7 @@ int main(int argc, char** argv) {
 
   configurar_luzes();
 
-  obj = carregar_obj("/Users/joao.prudencio/Documents/GitHub/obj-n-light/res/elepham.obj");
+  obj = carregar_obj("../res/elepham.obj");
   definir_desenho(obj);
 
   glutDisplayFunc(display);
