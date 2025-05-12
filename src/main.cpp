@@ -8,6 +8,7 @@
 #include <sstream>
 #include <string>
 #include <math.h>
+#include <chrono>
 
 #define LARGURA 512
 #define ALTURA 512
@@ -383,30 +384,37 @@ void desenhar_poligono(const Face& face) {
 }
 
 void definir_desenho(Poligono& obj) {
+  auto start_time = std::chrono::high_resolution_clock::now();
+
   obj.callList = glGenLists(1);
   glNewList(obj.callList, GL_COMPILE);
-  {
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
+  
+  glEnable(GL_CULL_FACE);
+  glCullFace(GL_BACK);
 
-    bool vermelho = true;
-    for (const Face& face : obj.faces) {
-      if (vermelho)
-        glColor3d(1, 0, 0);
-      else
-        glColor3d(0, 0, 0);
+  bool vermelho = true;
+  for (const Face& face : obj.faces) {
+    if (vermelho)
+      glColor3d(1, 0, 0);
+    else
+      glColor3d(0, 0, 0);
 
-      vermelho = !vermelho;
+    vermelho = !vermelho;
 
-      if (face.v.size() == 3)
-        desenhar_triangulo(face);
-      else if (face.v.size() == 4)
-        desenhar_quadrado(face);
-      else
-        desenhar_poligono(face);
-    }
+    if (face.v.size() == 3)
+      desenhar_triangulo(face);
+    else if (face.v.size() == 4)
+      desenhar_quadrado(face);
+    else
+      desenhar_poligono(face);
   }
+
   glEndList();
+
+  auto end_time = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+  
+  std::cout << "Tempo de execução do algoritmo de coloração: " << duration.count() << " milissegundos" << std::endl;
 }
 
 Poligono carregar_obj(std::string fname)
