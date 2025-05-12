@@ -9,6 +9,8 @@
 #include <string>
 #include <math.h>
 #include <chrono>
+#include <set>
+#include <algorithm>
 
 #define LARGURA 512
 #define ALTURA 512
@@ -64,6 +66,12 @@ struct Poligono {
   ListaFaces faces;
 
   int callList = -1;
+};
+
+struct ColoracaoInfo {
+    std::vector<int> cores;
+    int num_cores_utilizadas;
+    double tempo_execucao;
 };
 
 using Posicao = std::pair<int, int>;
@@ -383,38 +391,114 @@ void desenhar_poligono(const Face& face) {
   glEnd();
 }
 
+// Função para verificar se duas faces compartilham uma aresta
+bool compartilham_aresta(const Face& f1, const Face& f2) {
+    std::set<int> vertices_f1;
+    for (const auto& vf : f1.v) {
+        vertices_f1.insert(vf.indiceV);
+    }
+    
+    int vertices_compartilhados = 0;
+    for (const auto& vf : f2.v) {
+        if (vertices_f1.find(vf.indiceV) != vertices_f1.end()) {
+            vertices_compartilhados++;
+        }
+    }
+    
+    return vertices_compartilhados >= 2;
+}
+
+// Função para verificar se uma coloração é válida
+bool coloracao_valida(const std::vector<int>& cores, const ListaFaces& faces) {
+    for (size_t i = 0; i < faces.size(); i++) {
+        for (size_t j = i + 1; j < faces.size(); j++) {
+            if (compartilham_aresta(faces[i], faces[j]) && cores[i] == cores[j]) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+// Função para gerar todas as combinações possíveis de cores
+bool gerar_combinacoes_cores(std::vector<int>& cores, int num_cores, int pos, const ListaFaces& faces) {
+    if (pos == cores.size()) {
+        return coloracao_valida(cores, faces);
+    }
+    
+    for (int cor = 0; cor < num_cores; cor++) {
+        cores[pos] = cor;
+        if (gerar_combinacoes_cores(cores, num_cores, pos + 1, faces)) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+// Função principal para encontrar uma coloração válida usando força bruta
+ColoracaoInfo encontrar_coloracao_brute_force(const ListaFaces& faces) {
+    ColoracaoInfo info;
+    info.cores.resize(faces.size(), -1);
+    info.num_cores_utilizadas = 2; // Começa com 2 cores
+    
+    auto start_time = std::chrono::high_resolution_clock::now();
+    
+    while (true) {
+        if (gerar_combinacoes_cores(info.cores, info.num_cores_utilizadas, 0, faces)) {
+            break;
+        }
+        info.num_cores_utilizadas++;
+    }
+    
+    auto end_time = std::chrono::high_resolution_clock::now();
+    info.tempo_execucao = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+    
+    return info;
+}
+
 void definir_desenho(Poligono& obj) {
-  auto start_time = std::chrono::high_resolution_clock::now();
+    auto start_time = std::chrono::high_resolution_clock::now();
 
-  obj.callList = glGenLists(1);
-  glNewList(obj.callList, GL_COMPILE);
-  
-  glEnable(GL_CULL_FACE);
-  glCullFace(GL_BACK);
+    // Encontrar coloração usando força bruta
+    ColoracaoInfo coloracao = encontrar_coloracao_brute_force(obj.faces);
+    
+    obj.callList = glGenLists(1);
+    glNewList(obj.callList, GL_COMPILE);
+    
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
 
-  bool vermelho = true;
-  for (const Face& face : obj.faces) {
-    if (vermelho)
-      glColor3d(1, 0, 0);
-    else
-      glColor3d(0, 0, 0);
+    // Definir cores baseadas na coloração encontrada
+    for (size_t i = 0; i < obj.faces.size(); i++) {
+        const Face& face = obj.faces[i];
+        int cor = coloracao.cores[i];
+        
+        switch (cor) {
+            case 0: glColor3d(1, 0, 0); break; // Vermelho
+            case 1: glColor3d(0, 1, 0); break; // Verde
+            case 2: glColor3d(0, 0, 1); break; // Azul
+            case 3: glColor3d(1, 1, 0); break; // Amarelo
+            case 4: glColor3d(1, 0, 1); break; // Magenta
+            case 5: glColor3d(0, 1, 1); break; // Ciano
+            default: glColor3d(0.5, 0.5, 0.5); break; // Cinza para cores adicionais
+        }
 
-    vermelho = !vermelho;
+        if (face.v.size() == 3)
+            desenhar_triangulo(face);
+        else if (face.v.size() == 4)
+            desenhar_quadrado(face);
+        else
+            desenhar_poligono(face);
+    }
 
-    if (face.v.size() == 3)
-      desenhar_triangulo(face);
-    else if (face.v.size() == 4)
-      desenhar_quadrado(face);
-    else
-      desenhar_poligono(face);
-  }
+    glEndList();
 
-  glEndList();
-
-  auto end_time = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-  
-  std::cout << "Tempo de execução do algoritmo de coloração: " << duration.count() << " milissegundos" << std::endl;
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    
+    std::cout << "Tempo de execução do algoritmo de coloração: " << coloracao.tempo_execucao << " milissegundos" << std::endl;
+    std::cout << "Número de cores utilizadas: " << coloracao.num_cores_utilizadas << std::endl;
 }
 
 Poligono carregar_obj(std::string fname)
