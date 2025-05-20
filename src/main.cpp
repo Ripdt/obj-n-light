@@ -9,10 +9,9 @@
 #include <string>
 #include <math.h>
 
-#define LARGURA 512
-#define ALTURA 512
-
-bool luzAtiva[3] = { true, true, true };
+//--------------------------------------------------
+// Utils
+//--------------------------------------------------
 
 class Vector3D {
 public:
@@ -73,30 +72,46 @@ struct Mouse {
   float sense = .4f;
 };
 
-Poligono carregar_obj(std::string fname);
-void definir_desenho(Poligono& obj);
+struct BitMapFile
+{
+  int sizeX;
+  int sizeY;
+  unsigned char* data;
+};
+
+//--------------------------------------------------
+// Globals
+//--------------------------------------------------
+
+#define LARGURA 512
+#define ALTURA 512
+
+bool luzAtiva[3] = { true, true, true };
+Poligono obj;
+Mouse mouse;
+static int delay = 10;
+static GLuint textura;
+
+// Events
 void desenhar(Poligono& cubo);
 void display();
+void redraw(int value);
+// Input events
 void keyboard(unsigned char key, int x, int y);
 void mouse_move(int x, int y);
 void mouse_click(int button, int state, int x, int y);
-void redraw(int value);
-
-Poligono obj;
-int delay = 10;
-Mouse mouse;
+// obj
+Poligono carregar_obj(std::string fname);
+void definir_desenho(Poligono& obj);
+// Textures
+BitMapFile* getBMPData(std::string filename);
+void carregar_textura(GLuint& textura);
 
 void configurar_material() {
-  // Cor ambiente do material (reage à luz ambiente global)
   GLfloat mat_amb[] = { 0.2f, 0.2f, 0.2f, 1.0f };
-
-  // Cor difusa do material (reage à luz difusa das fontes)
   GLfloat mat_dif[] = { 0.5f, 0.5f, 0.5f, 1.0f };
-
-  // Cor especular do material (reflexos brilhantes)
   GLfloat mat_esp[] = { 0.8f, 0.8f, 0.8f, 1.0f };
 
-  // Brilho especular (quanto maior, mais focado o brilho)
   GLfloat brilho[] = { 30.0f };
 
   glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, mat_amb);
@@ -149,12 +164,10 @@ void configurar_luzes() {
   glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambiente_global);
 }
 
-
-
 int main(int argc, char** argv) {
-  glutInitWindowSize(LARGURA, ALTURA);
-
   glutInit(&argc, argv);
+  glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+  glutInitWindowSize(LARGURA, ALTURA);
   glutCreateWindow("Wireframe");
   glClearColor(1.f, 1.f, 1.f, 1.f);
 
@@ -168,7 +181,10 @@ int main(int argc, char** argv) {
 
   configurar_luzes();
 
-  obj = carregar_obj("../res/elepham.obj");
+  glGenTextures(1, &textura);
+  carregar_textura(textura);
+
+  obj = carregar_obj("../res/obj/cubo.obj");
   definir_desenho(obj);
 
   glutDisplayFunc(display);
@@ -211,6 +227,7 @@ void desenhar(Poligono& obj) {
   glRotatef(obj.rotacao.y, 0, 1, 0);
   glRotatef(obj.rotacao.z, 0, 0, 1);
   glScalef(obj.escala.x, obj.escala.y, obj.escala.z);
+
   glCallList(obj.callList);
   glPopMatrix();
 }
@@ -386,17 +403,12 @@ void definir_desenho(Poligono& obj) {
   obj.callList = glGenLists(1);
   glNewList(obj.callList, GL_COMPILE);
   {
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, textura);
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
-    bool vermelho = true;
     for (const Face& face : obj.faces) {
-      if (vermelho)
-        glColor3d(1, 0, 0);
-      else
-        glColor3d(0, 0, 0);
-
-      vermelho = !vermelho;
+      glColor3f(1, 1, 1);
 
       if (face.v.size() == 3)
         desenhar_triangulo(face);
@@ -481,3 +493,81 @@ Poligono carregar_obj(std::string fname)
   arquivo.close();
   return obj;
 }
+
+//--------------------------------------------------
+// Textures
+//--------------------------------------------------
+
+void carregar_textura(GLuint& textura)
+{
+  BitMapFile* image[1];
+
+  image[0] = getBMPData("../res/bmp/grass.bmp");
+
+  glBindTexture(GL_TEXTURE_2D, textura);
+
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image[0]->sizeX, image[0]->sizeY, 0,
+    GL_RGB, GL_UNSIGNED_BYTE, image[0]->data);
+}
+
+//--------------------------------------------------
+
+// Funciona somente com bmp de 24 bits
+BitMapFile* getBMPData(std::string filename)
+{
+  BitMapFile* bmp = new BitMapFile;
+  unsigned int size, offset, headerSize;
+
+  std::ifstream infile(filename.c_str(), std::ios::binary);
+
+  infile.seekg(28); // Offset do campo "bits per pixel"
+  unsigned short bpp = 0;
+  infile.read(reinterpret_cast<char*>(&bpp), 2);
+
+  if (bpp == 24) {
+    std::cout << "O BMP está em 24 bits." << std::endl;
+  }
+  else {
+    std::cout << "O BMP NÃO está em 24 bits. bpp = " << bpp << std::endl;
+  }
+
+  // Pegar o ponto inicial de leitura
+  infile.seekg(10);
+  infile.read((char*)&offset, 4);
+
+  // Pegar o tamanho do cabeзalho do bmp.
+  infile.read((char*)&headerSize, 4);
+
+  // Pegar a altura e largura da imagem no cabeзalho do bmp.
+  infile.seekg(18);
+  infile.read((char*)&bmp->sizeX, 4);
+  infile.read((char*)&bmp->sizeY, 4);
+
+  // Alocar o buffer para a imagem.
+  size = bmp->sizeX * bmp->sizeY * 24;
+  bmp->data = new unsigned char[size];
+
+  // Ler a informaзгo da imagem.
+  infile.seekg(offset);
+  infile.read((char*)bmp->data, size);
+
+  // Reverte a cor de bgr para rgb
+  int temp;
+  for (int i = 0; i < size; i += 3)
+  {
+    temp = bmp->data[i];
+    bmp->data[i] = bmp->data[i + 2];
+    bmp->data[i + 2] = temp;
+  }
+
+  return bmp;
+}
+
+//--------------------------------------------------
+

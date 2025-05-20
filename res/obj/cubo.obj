@@ -1,0 +1,55 @@
+# Vertices
+v -25 -25 -25
+v 25 -25 -25
+v 25  25 -25
+v -25  25 -25
+v -25 -25  25
+v 25 -25  25
+v 25  25  25
+v -25  25  25
+
+# Texture coordinates (4 para cada face, total 24)
+vt 0 0
+vt 1 0
+vt 1 1
+vt 0 1
+vt 0 0
+vt 1 0
+vt 1 1
+vt 0 1
+vt 0 0
+vt 1 0
+vt 1 1
+vt 0 1
+vt 0 0
+vt 1 0
+vt 1 1
+vt 0 1
+vt 0 0
+vt 1 0
+vt 1 1
+vt 0 1
+vt 0 0
+vt 1 0
+vt 1 1
+vt 0 1
+
+# Faces (cada face usa seus próprios vts)
+# Frente
+f 1/1 2/2 3/3
+f 1/1 3/3 4/4
+# Trás
+f 5/5 6/6 7/7
+f 5/5 7/7 8/8
+# Baixo
+f 1/9 2/10 6/11
+f 1/9 6/11 5/12
+# Direita
+f 2/13 3/14 7/15
+f 2/13 7/15 6/16
+# Cima
+f 3/17 4/18 8/19
+f 3/17 8/19 7/20
+# Esquerda
+f 4/21 1/22 5/23
+f 4/21 5/23 8/24

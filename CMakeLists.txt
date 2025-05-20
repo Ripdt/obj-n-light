@@ -19,6 +19,8 @@ if(WIN32)
 
     target_link_libraries(LoadObj PRIVATE ${FREEGLUT_LIB_DIR}/freeglut.lib opengl32.lib)
 
+		set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT LoadObj)
+
     add_custom_command(TARGET LoadObj POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${FREEGLUT_DLL} $<TARGET_FILE_DIR:LoadObj>)
